@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圏論 第2回 普遍構成 シミュレーション</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>:root{
+  /* palette matches the lecture slides: navy text, orange accent, pale-blue and grey cards */
+  --ink:#1E3A5F; --accent:#E68728; --blue:#5B7FA6; --deep:#2E6DA4;
+  --card:#D6E4F0; --grey:#E8E8E8; --bg:#F7F9FB; --white:#FFFFFF; --muted:#5d6f84;
+  --font:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6}
+header{padding:18px 20px 6px;max-width:1180px;margin:0 auto}
+h1{font-size:1.55rem;margin:0 0 4px;text-wrap:balance}
+header p{margin:0;color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:8px;padding:10px 20px;max-width:1180px;margin:0 auto}
+nav a{padding:8px 14px;border-radius:8px;background:var(--grey);color:var(--ink);text-decoration:none;font-weight:700}
+nav a.on{background:var(--ink);color:var(--white)}
+nav a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+main{max-width:1180px;margin:0 auto;padding:6px 20px 40px}
+section.view{display:none} section.view.on{display:block}
+.lead{margin:4px 0 14px;max-width:70ch}
+.grid{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:18px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--white);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(30,58,95,.12)}
+.panel h2{font-size:1.05rem;margin:0 0 10px;color:var(--accent)}
+.ctl{margin:0 0 14px}
+.ctl label{display:flex;justify-content:space-between;font-weight:700;font-size:.95rem}
+.ctl label output{font-variant-numeric:tabular-nums;color:var(--accent)}
+.ctl small{display:block;color:var(--muted);font-size:.8rem;line-height:1.4}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+button{font-family:inherit;font-size:.95rem;font-weight:700;border:0;border-radius:8px;padding:9px 14px;cursor:pointer;background:var(--card);color:var(--ink)}
+button.main{background:var(--accent);color:var(--white)}
+button.dark{background:var(--ink);color:var(--white)}
+button:hover{filter:brightness(.95)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--card);border-radius:10px;padding:10px 12px}
+.tile.grey{background:var(--grey)}
+.tile b{display:block;font-size:.82rem;color:var(--muted);font-weight:700}
+.tile span{font-size:1.45rem;font-weight:700;font-variant-numeric:tabular-nums}
+.tile span.acc{color:var(--accent)}
+.note{background:var(--grey);border-radius:10px;padding:10px 14px;font-size:.92rem;margin-top:12px}
+.note b{color:var(--accent)}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:var(--font);fill:var(--ink)}
+.log{font-size:.88rem;max-height:150px;overflow:auto;background:var(--bg);border-radius:8px;padding:6px 10px;font-variant-numeric:tabular-nums}
+.try{counter-reset:t;list-style:none;padding:0;margin:8px 0 0}
+.try li{counter-increment:t;padding-left:28px;position:relative;margin:4px 0}
+.try li::before{content:counter(t);position:absolute;left:0;top:2px;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:.78rem;display:grid;place-items:center;font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+select{font-family:inherit;font-size:.95rem;padding:6px 8px;border-radius:8px;border:1px solid #b9c6d4;background:#fff;color:var(--ink)}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700}
+.cell{cursor:pointer}
+.legend span{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:.88rem}
+.legend i{width:16px;height:16px;border-radius:4px;display:inline-block}
+</style>
+</head>
+<body>
+<header>
+  <h1>第2回　普遍構成：シミュレーション</h1>
+  <p>「いちばん良い作り方」である普遍構成を、約数の図と、文字と図形の学習課題で確かめます。</p>
+</header>
+<nav>
+  <a href="#product">① 積を見つける</a>
+  <a href="#learn">② 積で汎化する</a>
+</nav>
+<main>
+
+<section class="view" id="product">
+  <p class="lead">36の約数を「割り切る」の矢印でつないだ圏です（a → b は「a は b を割り切る」）。2つの数を選ぶと、両方に矢印を出せる数（共通の候補）が光ります。積は、候補のうち「ほかのすべての候補がただ1本の矢印で通過する」いちばん良い候補です。</p>
+  <div class="grid">
+    <div class="panel">
+      <h2>2つの対象を選ぶ</h2>
+      <div class="ctl"><label for="na">A</label><select id="na" style="width:100%"></select></div>
+      <div class="ctl"><label for="nb">B</label><select id="nb" style="width:100%"></select></div>
+      <div class="ctl"><label for="dual" style="justify-content:flex-start;gap:8px"><input type="checkbox" id="dual"> 双対（矢印を逆向きにして考える）</label></div>
+      <div class="btns"><button id="e1">12 と 18</button><button id="e2">4 と 9</button><button id="e3">6 と 12</button></div>
+      <div class="note"><b>やってみよう</b>
+        <ol class="try">
+          <li>12 と 18：候補は 1, 2, 3, 6。積は 6（最大公約数）</li>
+          <li>候補の 2 や 3 から、積の 6 へ矢印が1本ずつ出ていることを確かめる</li>
+          <li>「双対」をオンにすると、余積＝最小公倍数 36 になる</li>
+        </ol>
+      </div>
+    </div>
+    <div>
+      <div class="tiles">
+        <div class="tile"><b id="lblC">共通の候補</b><span id="cands"></span></div>
+        <div class="tile"><b id="lblP">積（いちばん良い候補）</b><span class="acc" id="prod"></span></div>
+      </div>
+      <div class="panel"><svg id="psvg"></svg>
+        <div class="legend"><span><i style="background:#E68728"></i>積（余積）</span><span><i style="background:#D6E4F0;border:2px solid #2E6DA4"></i>候補</span><span><i style="background:#1E3A5F"></i>選んだ A, B</span></div>
+      </div>
+      <div class="note" id="pnote"></div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="learn">
+  <p class="lead">1文字目（G, K, M）が色を、2文字目（A, E, O）が形を決める課題です。マスをクリックして「学習した組」を選びます。「積として学ぶ」と、行（色）と列（形）が1つずつわかれば、まだ見ていない組も予測できます。「丸ごと覚える」と、見た組しか答えられません。</p>
+  <div class="grid">
+    <div class="panel">
+      <h2>学習した組を選ぶ</h2>
+      <p style="margin:0 0 8px;font-size:.92rem">右の表のマスをクリック（もう一度押すと外れます）</p>
+      <div class="btns"><button id="l1">体験と同じ3つ</button><button id="l2">対角の3つ</button><button id="l3">1行だけ</button><button id="l0">全部外す</button></div>
+      <div class="note"><b>やってみよう</b>
+        <ol class="try">
+          <li>「体験と同じ3つ」（GA, GE, KA）：積で学ぶと KE も予測できる</li>
+          <li>「対角の3つ」：たった3組で、9組すべてを予測できる</li>
+          <li>「1行だけ」：色は1つしかわからないので、汎化は限られる</li>
+        </ol>
+      </div>
+    </div>
+    <div>
+      <div class="tiles">
+        <div class="tile"><b>学習した組</b><span id="nT"></span></div>
+        <div class="tile"><b>積として学ぶと答えられる組</b><span class="acc" id="nP"></span></div>
+        <div class="tile grey"><b>丸ごと覚えると答えられる組</b><span id="nM"></span></div>
+      </div>
+      <div class="panel"><svg id="gsvg"></svg>
+        <div class="legend"><span><i style="background:#1E3A5F"></i>学習した組</span><span><i style="background:#E68728"></i>積で予測できる新しい組</span><span><i style="background:#E8E8E8"></i>予測できない</span></div>
+      </div>
+      <div class="note" id="gnote"></div>
+    </div>
+  </div>
+</section>
+</main>
+<script>const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+const ln = Math.log;
+function xlogx(p) { return p > 0 ? p * Math.log(p) : 0; }
+function H(ps) { return -ps.reduce((s, p) => s + xlogx(p), 0); }
+function KL(q, p) { let s = 0; q.forEach((qi, i) => { if (qi > 0) s += qi * (Math.log(qi) - Math.log(p[i])); }); return s; }
+function f2(x, d = 2) { if (!isFinite(x)) return "∞"; const v = Math.abs(x) < 0.5 * Math.pow(10, -d) ? 0 : x; return v.toFixed(d); }
+const C = { ink: "#1E3A5F", acc: "#E68728", blue: "#5B7FA6", deep: "#2E6DA4", card: "#D6E4F0", grey: "#E8E8E8", mut: "#5d6f84", line: "#A6A6A6" };
+function bind(id, fn) { const i = document.getElementById(id); const o = document.getElementById(id + "_o"); const up = () => { if (o) o.value = fn ? fn(+i.value) : i.value; }; i.addEventListener("input", () => { up(); render(); }); up(); return i; }
+function val(id) { return +document.getElementById(id).value; }
+function setVal(id, v) { const i = document.getElementById(id); i.value = v; i.dispatchEvent(new Event("input")); }
+// simple bar chart: items [{label, v, color}], max value, svg width/height
+function barsV(svg, items, opt) {
+  const W = opt.w || 420, Hh = opt.h || 220, top = 28, bot = 34, max = opt.max || 1;
+  svg.setAttribute("viewBox", `0 0 ${W} ${Hh}`); clear(svg);
+  if (opt.title) el("text", { x: 4, y: 16, "font-size": 14, "font-weight": 700, fill: C.acc }, svg, opt.title);
+  const n = items.length, bw = Math.min(70, (W - 40) / (n * 1.7)), gap = (W - n * bw) / (n + 1);
+  const base = Hh - bot, mh = base - top - 18;
+  el("line", { x1: 8, x2: W - 8, y1: base, y2: base, stroke: C.line }, svg);
+  items.forEach((it, i) => {
+    const x = gap + i * (bw + gap), h = Math.max(1, Math.min(1, it.v / max) * mh);
+    el("rect", { x, y: base - h, width: bw, height: h, fill: it.color || C.blue, rx: 3 }, svg);
+    el("text", { x: x + bw / 2, y: base - h - 6, "text-anchor": "middle", "font-size": 14, "font-weight": 700 }, svg, it.t !== undefined ? it.t : f2(it.v));
+    el("text", { x: x + bw / 2, y: base + 20, "text-anchor": "middle", "font-size": 13 }, svg, it.label);
+  });
+}
+function lineChart(svg, series, opt) {
+  // series: [{pts:[[x,y]...], color, dash, label}]
+  const W = opt.w || 640, Hh = opt.h || 240, l = 46, r = 14, t = 26, b = 30;
+  svg.setAttribute("viewBox", `0 0 ${W} ${Hh}`); clear(svg);
+  const [x0, x1] = opt.x, [y0, y1] = opt.y;
+  const X = v => l + (v - x0) / (x1 - x0) * (W - l - r), Y = v => t + (1 - (v - y0) / (y1 - y0)) * (Hh - t - b);
+  if (opt.title) el("text", { x: 4, y: 16, "font-size": 14, "font-weight": 700, fill: C.acc }, svg, opt.title);
+  (opt.yticks || []).forEach(v => { el("line", { x1: l, x2: W - r, y1: Y(v), y2: Y(v), stroke: "#e3e8ee" }, svg); el("text", { x: l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 12, fill: C.mut }, svg, opt.yfmt ? opt.yfmt(v) : v); });
+  (opt.xticks || []).forEach(v => el("text", { x: X(v), y: Hh - 10, "text-anchor": "middle", "font-size": 12, fill: C.mut }, svg, opt.xfmt ? opt.xfmt(v) : v));
+  if (opt.xlabel) el("text", { x: W - r, y: Hh - b - 6, "text-anchor": "end", "font-size": 12, fill: C.mut }, svg, opt.xlabel);
+  (opt.hlines || []).forEach(h => { el("line", { x1: l, x2: W - r, y1: Y(h.y), y2: Y(h.y), stroke: h.color, "stroke-dasharray": "6 4", "stroke-width": 1.5 }, svg); el("text", { x: l + 6, y: Y(h.y) - 5, "text-anchor": "start", "font-size": 12, fill: h.color }, svg, h.label); });
+  series.forEach(s => {
+    if (!s.pts.length) return;
+    const d = s.pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(Math.max(y0, Math.min(y1, p[1]))).toFixed(1)).join(" ");
+    el("path", { d, fill: "none", stroke: s.color, "stroke-width": s.w || 2.5, "stroke-dasharray": s.dash || "" }, svg);
+    if (s.dot) { const p = s.pts[s.pts.length - 1]; el("circle", { cx: X(p[0]), cy: Y(Math.max(y0, Math.min(y1, p[1]))), r: 5, fill: s.color }, svg); }
+  });
+  if (opt.marks) opt.marks.forEach(m => { el("circle", { cx: X(m.x), cy: Y(m.y), r: 6, fill: m.color || C.acc, stroke: "#fff", "stroke-width": 2 }, svg); if (m.label) el("text", { x: X(m.x) + (m.dx || 8), y: Y(m.y) - 8, "font-size": 13, "font-weight": 700, fill: m.color || C.acc, "text-anchor": m.anchor || "start" }, svg, m.label); });
+  if (opt.legend) { let lx = l + 4; opt.legend.forEach(g => { el("rect", { x: lx, y: Hh - b + 16 - 26 - 0, width: 0, height: 0 }, svg); }); }
+  return { X, Y };
+}
+function legend(div, items) { div.innerHTML = items.map(i => `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:.88rem"><span style="width:18px;height:4px;background:${i.c};display:inline-block;border-radius:2px;${i.dash ? 'background:repeating-linear-gradient(90deg,' + i.c + ' 0 5px,transparent 5px 9px)' : ''}"></span>${i.t}</span>`).join(""); }
+function tabs(def) {
+  const show = () => { const h = (location.hash || "#" + def).slice(1); document.querySelectorAll("section.view").forEach(s => s.classList.toggle("on", s.id === h)); document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + h)); if (!document.querySelector("section.view.on")) { document.getElementById(def).classList.add("on"); } };
+  window.addEventListener("hashchange", show); show();
+}
+</script>
+<script>
+const _el0 = el; el = function (t, a, p, x) { const e = _el0(t, a, p, x); if (t === "text" && a && a.fill) e.style.fill = a.fill; return e; };
+// ---------- ① product in divisor poset ----------
+const D = [1, 2, 3, 4, 6, 9, 12, 18, 36];
+["na", "nb"].forEach(id => { const s = document.getElementById(id); D.forEach(v => { const o = document.createElement("option"); o.value = v; o.textContent = v; s.appendChild(o); }); s.onchange = render; });
+document.getElementById("dual").onchange = render;
+const pick = (a, b) => { document.getElementById("na").value = a; document.getElementById("nb").value = b; render(); };
+document.getElementById("e1").onclick = () => pick(12, 18);
+document.getElementById("e2").onclick = () => pick(4, 9);
+document.getElementById("e3").onclick = () => pick(6, 12);
+const pos = { 1: [340, 335], 2: [220, 260], 3: [460, 260], 4: [110, 185], 6: [340, 185], 9: [570, 185], 12: [220, 110], 18: [460, 110], 36: [340, 35] };
+const divides = (a, b) => b % a === 0;
+function renderP() {
+  const a = +document.getElementById("na").value, b = +document.getElementById("nb").value, dual = document.getElementById("dual").checked;
+  const cands = D.filter(z => dual ? (divides(a, z) && divides(b, z)) : (divides(z, a) && divides(z, b)));
+  const best = cands.find(p => cands.every(z => dual ? divides(p, z) : divides(z, p)));
+  document.getElementById("lblC").textContent = dual ? "共通の候補（両方から矢印が来る数）" : "共通の候補（両方へ矢印を出す数）";
+  document.getElementById("lblP").textContent = dual ? "余積（いちばん良い候補）" : "積（いちばん良い候補）";
+  document.getElementById("cands").textContent = cands.join(", ") || "なし";
+  document.getElementById("prod").textContent = best !== undefined ? best : "なし";
+  document.getElementById("pnote").innerHTML = best === undefined ? "<b>この2つには、この圏の中に積がありません。</b>" :
+    (dual ? `<b>余積 ${best}</b> は ${a} と ${b} の最小公倍数。ほかの候補（${cands.filter(z => z !== best).join(", ") || "なし"}）へは、${best} からただ1本の矢印で行ける。`
+          : `<b>積 ${best}</b> は ${a} と ${b} の最大公約数。ほかの候補（${cands.filter(z => z !== best).join(", ") || "なし"}）は、どれも ${best} へただ1本の矢印でつながる。`);
+  const svg = document.getElementById("psvg"); svg.setAttribute("viewBox", "0 0 680 385"); clear(svg);
+  const defs = el("defs", {}, svg);
+  [["g", "#c3ccd6"], ["o", "#E68728"]].forEach(([id, c]) => { const m = el("marker", { id: "a" + id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" }, defs); el("path", { d: "M0,0 L10,5 L0,10 z", fill: c }, m); });
+  const cover = [[1, 2], [1, 3], [2, 4], [2, 6], [3, 6], [3, 9], [4, 12], [6, 12], [6, 18], [9, 18], [12, 36], [18, 36]];
+  const line = (u, v, col, mk, w) => { const [x1, y1] = pos[u], [x2, y2] = pos[v], dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), r = 22; el("line", { x1: x1 + dx / L * r, y1: y1 + dy / L * r, x2: x2 - dx / L * r, y2: y2 - dy / L * r, stroke: col, "stroke-width": w, "marker-end": `url(#a${mk})` }, svg); };
+  cover.forEach(([u, v]) => line(u, v, "#c3ccd6", "g", 1.5));
+  if (best !== undefined) cands.filter(z => z !== best).forEach(z => dual ? line(best, z, "#E68728", "o", 2.5) : line(z, best, "#E68728", "o", 2.5));
+  D.forEach(v => {
+    const [x, y] = pos[v], isAB = v === a || v === b, isC = cands.includes(v), isP = v === best;
+    el("circle", { cx: x, cy: y, r: 21, fill: isP ? C.acc : isAB ? C.ink : isC ? C.card : "#fff", stroke: isC || isP ? C.deep : "#9aa7b4", "stroke-width": isC ? 2.5 : 1.2 }, svg);
+    el("text", { x, y: y + 6, "text-anchor": "middle", "font-size": 16, "font-weight": 700, fill: isP || isAB ? "#fff" : C.ink }, svg, v);
+  });
+  el("text", { x: 10, y: 378, "font-size": 12, fill: C.mut }, svg, "灰色の矢印：割り切る（合成で作れる矢印は省略）。オレンジ：候補とのただ1本のつながり");
+}
+
+// ---------- ② learning by product ----------
+const L1 = ["G", "K", "M"], L2 = ["A", "E", "O"], COL = ["#D64545", "#2E6DA4", "#4EA72E"], CN = ["赤", "青", "緑"], SN = ["丸", "四角", "三角"];
+let trained = new Set(["0,0", "0,1", "1,0"]);
+const setT = arr => { trained = new Set(arr); render(); };
+document.getElementById("l1").onclick = () => setT(["0,0", "0,1", "1,0"]);
+document.getElementById("l2").onclick = () => setT(["0,0", "1,1", "2,2"]);
+document.getElementById("l3").onclick = () => setT(["0,0", "0,1", "0,2"]);
+document.getElementById("l0").onclick = () => setT([]);
+function shape(svg, k, x, y, s, col) {
+  if (k === 0) el("circle", { cx: x, cy: y, r: s, fill: col }, svg);
+  else if (k === 1) el("rect", { x: x - s, y: y - s, width: 2 * s, height: 2 * s, fill: col }, svg);
+  else el("polygon", { points: `${x},${y - s * 1.1} ${x + s * 1.1},${y + s * .9} ${x - s * 1.1},${y + s * .9}`, fill: col }, svg);
+}
+function renderG() {
+  const rowsK = new Set([...trained].map(t => +t.split(",")[0])), colsK = new Set([...trained].map(t => +t.split(",")[1]));
+  let nP = 0;
+  const svg = document.getElementById("gsvg"); svg.setAttribute("viewBox", "0 0 680 330"); clear(svg);
+  el("text", { x: 150, y: 26, "font-size": 13, fill: C.mut }, svg, "2文字目 → 形");
+  el("text", { x: 8, y: 190, "font-size": 13, fill: C.mut }, svg, "1文字目");
+  el("text", { x: 8, y: 207, "font-size": 13, fill: C.mut }, svg, "→ 色");
+  L2.forEach((c, j) => el("text", { x: 170 + j * 130, y: 52, "text-anchor": "middle", "font-size": 16, "font-weight": 700 }, svg, c));
+  L1.forEach((r, i) => el("text", { x: 82, y: 108 + i * 90, "text-anchor": "middle", "font-size": 16, "font-weight": 700 }, svg, r));
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const key = i + "," + j, isT = trained.has(key), canP = rowsK.has(i) && colsK.has(j);
+    if (canP) nP++;
+    const x = 110 + j * 130, y = 66 + i * 90;
+    const g = el("g", { class: "cell", tabindex: 0, role: "button", "aria-label": L1[i] + L2[j] }, svg);
+    el("rect", { x, y, width: 120, height: 80, rx: 10, fill: isT ? C.ink : canP ? C.acc : C.grey }, g);
+    el("text", { x: x + 12, y: y + 22, "font-size": 15, "font-weight": 700, fill: isT || canP ? "#fff" : C.mut }, g, L1[i] + L2[j]);
+    if (canP) shape(g, j, x + 82, y + 46, 18, COL[i]);
+    else el("text", { x: x + 82, y: y + 54, "text-anchor": "middle", "font-size": 22, fill: C.mut }, g, "？");
+    if (canP) el("text", { x: x + 12, y: y + 70, "font-size": 12, fill: "#fff" }, g, CN[i] + "い" + SN[j]);
+    const tog = () => { trained.has(key) ? trained.delete(key) : trained.add(key); render(); };
+    g.addEventListener("click", tog); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tog(); } });
+  }
+  document.getElementById("nT").textContent = trained.size + " / 9";
+  document.getElementById("nP").textContent = nP + " / 9";
+  document.getElementById("nM").textContent = trained.size + " / 9";
+  document.getElementById("gnote").innerHTML = `<b>しくみ</b>　積として学ぶ ＝「文字→色」の地図と「文字→形」の地図の2つに分けて学ぶこと。わかっている色は ${[...rowsK].map(i => L1[i] + "＝" + CN[i]).join("、") || "なし"}、わかっている形は ${[...colsK].map(j => L2[j] + "＝" + SN[j]).join("、") || "なし"}。行と列が両方わかるマスは、見ていなくても答えられる。`;
+}
+function render() { renderP(); renderG(); }
+document.getElementById("na").value=12; document.getElementById("nb").value=18;
+tabs("product"); render();
+</script>
+</body>
+</html>
